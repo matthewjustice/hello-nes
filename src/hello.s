@@ -57,10 +57,29 @@ APUFRAME    = $4017
     stx APUDMC_IRQ  ; Disable APU DMC IRQ
     dex             ; x = $FF
     txs             ; set stack pointer to $01FF
-    bit PPUSTATUS   ; Acknowledge PPU VBLANK NMI
+    bit PPUSTATUS   ; Acknowledge PPU VBLANK if already set
     lda #$40
     sta APUFRAME    ; Disable APU Frame IRQ
     cld             ; Disable decimal mode (unsupported on NES)
+
+    ; Wait on the PPU to "warm up". We'll know the PPU is ready
+    ; once two VBLANKs have occurred. Normally we are notified
+    ; of VBLANK by the PPU's NMI, but the NMI method isn't reliable
+    ; at this stage. Instead, spin on bit 7 of PPUSTATUS.
+    ; Wait on the first VBLANK
+vblank_wait_1:
+    bit PPUSTATUS       ; set flag N = bit 7 of PPUSTATUS (1 = in VBLANK)
+    bpl vblank_wait_1   ; loop while flag N=0 (while not in VBLANK)
+
+    ; We have some time now before the second VBLANK.
+
+    ; Wait on the second VBLANK
+vblank_wait_2:
+    bit PPUSTATUS       ; set flag N = bit 7 of PPUSTATUS (1 = in VBLANK)
+    bpl vblank_wait_2   ; loop while flag N=0 (while not in VBLANK)
+
+    ; PPU is now warmed up.
+
     rti
 .endproc
 
