@@ -42,6 +42,11 @@ APUFRAME    = $4017
 .addr reset_handler
 .addr irq_handler
 
+; The OAM (Object Attribute Memory) segment is mapped from the PPU
+; It contains a list of up to 64 sprites, each 4 bytes in size.
+.segment "OAM"
+oam: .res 256
+
 ; The CODE segment contains, well, code.
 .segment "CODE"
 
@@ -72,6 +77,24 @@ vblank_wait_1:
     bpl vblank_wait_1   ; loop while flag N=0 (while not in VBLANK)
 
     ; We have some time now before the second VBLANK.
+    ; During our extra cycles, first zero out the zero page
+    ldx #$00
+    lda #$00
+clear_zp_loop:
+    sta $0000, x        ; set value at [0000+x] = 0
+    inx
+    bne clear_zp_loop
+
+    ; Next move all sprites below the visible area
+    ldx #$00
+    lda #$FF    ; Y offset 255 if off screen
+offscreen_sprites_loop:
+    sta oam, x  ; set sprite Y pos = 255
+    inx         ; x = x + 4 to move to the next sprite
+    inx         ; The first bye of each sprite represents
+    inx         ; its y position.
+    inx
+    bne offscreen_sprites_loop ; do this for all 64 sprites
 
     ; Wait on the second VBLANK
 vblank_wait_2:
@@ -79,8 +102,7 @@ vblank_wait_2:
     bpl vblank_wait_2   ; loop while flag N=0 (while not in VBLANK)
 
     ; PPU is now warmed up.
-
-    rti
+    jmp main
 .endproc
 
 ; nmi_handler
@@ -93,5 +115,12 @@ vblank_wait_2:
 ; Handles the interrupt for the BRK command
 .proc irq_handler
     rti
+.endproc
+
+; main
+; The main game logic
+.proc main
+forever:
+    jmp forever
 .endproc
 
