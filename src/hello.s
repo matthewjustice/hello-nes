@@ -120,7 +120,43 @@ vblank_wait_2:
 ; main
 ; The main game logic
 .proc main
+    ; We just read PPUSTATUS and should be in VBLANK
+    ; Load the palette
+    jsr load_palette
 forever:
     jmp forever
 .endproc
 
+; load_palette
+; Load palette data to PPU palette memory
+.proc load_palette
+    ; first set the VRAM address, upper byte first ($3F00)
+    ldx #$3F
+    stx PPUADDR
+    ldx #$00
+    stx PPUADDR
+load_palette_loop:
+    lda palette_data, x
+    sta PPUDATA
+    inx
+    cpx #32 ; If x >= 32, set carry flag
+    bcc load_palette_loop ; Only copy 32 byte
+    rts
+.endproc
+
+; The RODATA segment is read-only data in PRG ROM 
+.segment "RODATA"
+palette_data:
+.byte $0F, $20, $21, $15 ; background palette 0 - black, white, blue, red
+.byte $0F, $00 ,$00, $00 ; background palette 1
+.byte $0F, $00, $00, $00 ; background palette 2
+.byte $0F, $00, $00, $00 ; background palette 3
+.byte $0F, $00, $00, $00 ; sprite palette 0
+.byte $0F, $00, $00, $00 ; sprite palette 1
+.byte $0F, $00, $00, $00 ; sprite palette 2
+.byte $0F, $00, $00, $00 ; sprite palette 3
+
+; The TILES segment contains the graphics data in CHR ROM
+.segment "TILES"
+.incbin "background.chr"
+.incbin "sprites.chr"
