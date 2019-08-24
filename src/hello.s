@@ -22,6 +22,17 @@ PPUADDR   = $2006
 PPUDATA   = $2007
 OAMDMA    = $4014
 
+; constants used by PPUCTRL
+PPU_ENABLE_VBLANK    = $80
+PPU_BG_TABLE_AT_0000 = $00
+PPU_BG_TABLE_AT_1000 = $10
+PPU_SP_TABLE_AT_0000 = $00
+PPU_SP_TABLE_AT_1000 = $08
+
+; constants used by PPUMASK
+PPU_SHOW_SPRITES     = $14 ; 10 (show) & 04 (show in leftmost)
+PPU_SHOW_BACKGROUND  = $0A ; 08 (show) & 02 (show in leftmost)
+
 ; constants to APU registers mapped into memory
 APUDMC_IRQ  = $4010
 APUSTATUS   = $4015
@@ -123,6 +134,12 @@ vblank_wait_2:
     ; We just read PPUSTATUS and should be in VBLANK
     ; Load the palette
     jsr load_palette
+
+    ; Show the background
+    jsr show_background
+
+    ; Turn on screen
+    jsr turn_on_screen
 forever:
     jmp forever
 .endproc
@@ -143,6 +160,49 @@ load_palette_loop:
     bcc load_palette_loop ; Only copy 32 byte
     rts
 .endproc
+
+.proc show_background
+    ; first set the VRAM address, to a location in the nametable ($2020)
+    ; upper byte first
+    ; #21C0 is the 15th row down (about the middle of the screen vertically)
+    ; Then slide it right 11 tiles (0xB) to put the tiles in roughly the 
+    ; center of the screen giving us $21CB
+    ldx #$21
+    stx PPUADDR
+    ldx #$CB
+    stx PPUADDR
+
+    ; Our background consists of only 11 tiles, numbered 1 - 11.
+    ; Place them on the screen starting at the location indicated
+    ; above. We want them displayed in order.
+    ldx #$01
+show_background_loop:
+    stx PPUDATA
+    inx
+    cpx #11 ; if x >= 11, set carry flag
+    bcc show_background_loop
+    rts
+.endproc
+
+.proc turn_on_screen
+    ; set initial scroll coordinates
+    ldx #0
+    stx PPUSCROLL
+    stx PPUSCROLL
+
+    ; Enable VBLANK NMI
+    ; set the background table address to $0000
+    ; set the sprint table address to $1000 
+    ldx #PPU_ENABLE_VBLANK|PPU_BG_TABLE_AT_0000|PPU_SP_TABLE_AT_1000
+    stx PPUCTRL
+
+    ; Show sprites and background
+    ldx #PPU_SHOW_SPRITES|PPU_SHOW_BACKGROUND
+    stx PPUMASK
+
+    rts
+.endproc
+
 
 ; The RODATA segment is read-only data in PRG ROM 
 .segment "RODATA"
