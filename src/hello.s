@@ -44,7 +44,25 @@ OAM_ATTR_FLIP_VERT   = $80
 ; constants to APU registers mapped into memory
 APUDMC_IRQ  = $4010
 APUSTATUS   = $4015
-APUFRAME    = $4017
+APUFRAME    = $4017 ; write for APU (read is controller 2)
+
+; constants for contollers
+CONTROLLER_1      = $4016
+CONTROLLER_2      = $4017
+CONTROLLER_RIGHT  = $01
+CONTROLLER_LEFT   = $02
+CONTROLLER_DOWN   = $04
+CONTROLLER_UP     = $08
+CONTROLLER_START  = $10
+CONTROLLER_SELECT = $20
+CONTROLLER_B      = $40
+CONTROLLER_A      = $80
+
+; constants for game state
+SHIP_ORIENTATION_UP    = 1
+SHIP_ORIENTATION_DOWN  = 2
+SHIP_ORIENTATION_LEFT  = 3
+SHIP_ORIENTATION_RIGHT = 4
 
 ; The HEADER segment contains the 16-byte iNES signature.
 .segment "HEADER"
@@ -65,7 +83,12 @@ APUFRAME    = $4017
 ; of RAM. Instructions that access it are faster. Store
 ; global variables here.
 .segment "ZEROPAGE"
-nmi_count: .res 1  ; increments on VBLANK NMI
+locals:             .res 16 ; save 16 bytes for local variables
+nmi_count:          .res 1  ; increments on VBLANK NMI
+controller1_state:  .res 1  ; the last read state of controller 1
+ship_x:             .res 1  ; the x coordinate of the ship
+ship_y:             .res 1  ; the y coordinate of the ship
+ship_orientation:   .res 1  ; the orientation of the ship
 
 ; The OAM (Object Attribute Memory) segment contains data
 ; to be copied to OAM memory in the PPU during VBLANK
@@ -156,8 +179,21 @@ vblank_wait_2:
 
     ; Turn on screen
     jsr turn_on_screen
+
+    ; Initial game state
+    lda #10
+    sta ship_x
+    lda #20
+    sta ship_y
+    lda #SHIP_ORIENTATION_UP
+    sta ship_orientation
 forever:
-    ; game logic here
+    ; Read the state of the controllers
+    jsr read_controllers
+
+    ; Update game state based on controller state
+    jsr handle_controller_state
+
     ; prepare OAM data
     jsr prepare_oam
 
@@ -168,10 +204,7 @@ main_vblank_wait:
     beq main_vblank_wait
 
     ; Copy OAM data to the PPU
-    lda #0
-    sta OAMADDR
-    lda #>oam
-    sta OAMDMA
+    jsr dma_oam_transfer
 
     jmp forever
 .endproc
@@ -236,26 +269,157 @@ show_background_loop:
 .endproc
 
 .proc prepare_oam
-    ; cursor sprite, byte 0, y pos = 5
+    ; define addresses of local variables
+    tile_number = 0
+    oam_attribs   = 1
+
+    lda ship_orientation
+check_ship_up:
+    cmp #SHIP_ORIENTATION_UP
+    bne check_ship_down
+    ; Ship is up
+    ldx #0 ; sprite tile 0 is the up/down ship
+    stx tile_number
+    ldx #OAM_ATTR_PALETTE_4
+    stx oam_attribs
+
+check_ship_down:
+    cmp #SHIP_ORIENTATION_DOWN
+    bne check_ship_left
+    ; Ship is down
+    ldx #0 ; sprite tile 0 is the up/down ship
+    stx tile_number
+    ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_VERT
+    stx oam_attribs
+
+check_ship_left:
+    cmp #SHIP_ORIENTATION_LEFT
+    bne check_ship_right
+    ; Ship is left
+    ldx #1 ; sprite tile 1 is the left/right ship
+    stx tile_number
+    ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_HORIZ
+    stx oam_attribs
+
+check_ship_right:
+    cmp #SHIP_ORIENTATION_RIGHT
+    bne write_data
+    ; Ship is right
+    ldx #1 ; sprite tile 1 is the left/right ship
+    stx tile_number
+    ldx #OAM_ATTR_PALETTE_4
+    stx oam_attribs
+
+write_data:
+    ; ship sprite, byte 0, y pos
     ldx #$00
-    lda #5
+    lda ship_y
     sta oam, x
 
-    ; cursor sprite, byte 1, tile = 0
+    ; ship sprite, byte 1, tile number
     inx
+    lda tile_number
+    sta oam, x
+
+    ; ship sprite, byte 2, attributes
+    inx
+    lda oam_attribs
+    sta oam, x
+
+    ; ship sprite, byte 4, x pos
+    inx
+    lda ship_x
+    sta oam, x
+
+    rts
+.endproc
+
+; dma_oam_transfer
+; Use DMA to transfer the local RAM OAM data
+; to the PPU's internal OAM 
+.proc dma_oam_transfer
+    lda #0      ; Set OAM address to 0
+    sta OAMADDR
+    lda #>oam   ; a = high byte of OAM start address ($XX)
+    sta OAMDMA  ; Upload 256 bytes from RAM $XX00 to PPU OAM
+    rts
+.endproc
+
+.proc read_controllers
+    ; Write 1 to $CONTROLLER_1 to retrieve the buttons currently held
+    lda #1
+    sta CONTROLLER_1
+
+    ; Write 0 to $CONTROLLER_1 to go finish the poll of buttons
     lda #0
-    sta oam, x
+    sta CONTROLLER_1
 
-    ; cursor sprite, byte 2, attributes
+    ; Read the polled data button at a time (8 buttons total)
+    ; Each button's state comes back one byte at at time
+    ldx #8
+controller_read_loop:
+    lda CONTROLLER_1 ; bit 0 = NES/Famicom, bit 1 = Fami Expansion
+    and #%00000011   ; ignore the other bits 
+    cmp #1           ; carry = 1 if bits are => 1, carry = 0 otherwise
+    rol controller1_state ; move the carry bit to lsb of controller1_state
+    dex
+    bne controller_read_loop
+    rts
+.endproc
+
+; handle_controller_state
+; Check the various controller buttons and set game state
+.proc handle_controller_state
+check_left:
+    lda controller1_state
+    and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0
+    beq check_right       ; branch if left isn't pressed
+    ; left is pressed, move ship left
+    ldx ship_x
+    dex
+    stx ship_x
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_LEFT
+    stx ship_orientation
+
+check_right:
+    lda controller1_state
+    and #CONTROLLER_RIGHT   ; if right is pressed, zero flag is 0
+    beq check_up            ; branch if right isn't pressed
+    ; right is pressed, move ship right
+    ldx ship_x
     inx
-    lda #OAM_ATTR_PALETTE_4
-    sta oam, x
+    stx ship_x
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_RIGHT
+    stx ship_orientation
 
-    ; cursor sprite, byte 4, x pos = 5
+check_up:
+    lda controller1_state
+    and #CONTROLLER_UP      ; if up is pressed, zero flag is 0
+    beq check_down          ; branch if up isn't pressed
+    ; up is pressed, move ship up
+    ldx ship_y
+    dex
+    stx ship_y
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_UP
+    stx ship_orientation
+
+check_down:
+    lda controller1_state
+    and #CONTROLLER_DOWN    ; if down is pressed, zero flag is 0
+    beq check_a             ; branch if down isn't pressed
+    ; down is pressed, move ship down
+    ldx ship_y
     inx
-    lda #5
-    sta oam, x
+    stx ship_y
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_DOWN
+    stx ship_orientation
 
+check_a:
+    ; TODO - buttons
     rts
 .endproc
 
