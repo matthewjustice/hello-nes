@@ -5,7 +5,6 @@
 ; Description: A simple Hello World style program for the NES
 ;
 
-
 ; iNES header constants
 INES_MAPPER_NROM        = 0  
 INES_MIRROR_VERTICAL    = 1
@@ -33,6 +32,15 @@ PPU_SP_TABLE_AT_1000 = $08
 PPU_SHOW_SPRITES     = $14 ; 10 (show) & 04 (show in leftmost)
 PPU_SHOW_BACKGROUND  = $0A ; 08 (show) & 02 (show in leftmost)
 
+; constants used in OAM attributes
+OAM_ATTR_PALETTE_4   = $00
+OAM_ATTR_PALETTE_5   = $01
+OAM_ATTR_PALETTE_6   = $02
+OAM_ATTR_PALETTE_7   = $03
+OAM_ATTR_BEHIND_BGND = $20
+OAM_ATTR_FLIP_HORIZ  = $40
+OAM_ATTR_FLIP_VERT   = $80
+
 ; constants to APU registers mapped into memory
 APUDMC_IRQ  = $4010
 APUSTATUS   = $4015
@@ -53,7 +61,14 @@ APUFRAME    = $4017
 .addr reset_handler
 .addr irq_handler
 
-; The OAM (Object Attribute Memory) segment is mapped from the PPU
+; The ZEROPAGE segment defines the first page (256 bytes)
+; of RAM. Instructions that access it are faster. Store
+; global variables here.
+.segment "ZEROPAGE"
+nmi_count: .res 1  ; increments on VBLANK NMI
+
+; The OAM (Object Attribute Memory) segment contains data
+; to be copied to OAM memory in the PPU during VBLANK
 ; It contains a list of up to 64 sprites, each 4 bytes in size.
 .segment "OAM"
 oam: .res 256
@@ -119,6 +134,7 @@ vblank_wait_2:
 ; nmi_handler
 ; Handles the NMI that occurs as a result of VBLANK from the PPU
 .proc nmi_handler
+    inc nmi_count
     rti
 .endproc
 
@@ -141,6 +157,22 @@ vblank_wait_2:
     ; Turn on screen
     jsr turn_on_screen
 forever:
+    ; game logic here
+    ; prepare OAM data
+    jsr prepare_oam
+
+    ; wait on a VBLANK NMI
+    lda nmi_count
+main_vblank_wait:
+    cmp nmi_count
+    beq main_vblank_wait
+
+    ; Copy OAM data to the PPU
+    lda #0
+    sta OAMADDR
+    lda #>oam
+    sta OAMDMA
+
     jmp forever
 .endproc
 
@@ -203,6 +235,29 @@ show_background_loop:
     rts
 .endproc
 
+.proc prepare_oam
+    ; cursor sprite, byte 0, y pos = 5
+    ldx #$00
+    lda #5
+    sta oam, x
+
+    ; cursor sprite, byte 1, tile = 0
+    inx
+    lda #0
+    sta oam, x
+
+    ; cursor sprite, byte 2, attributes
+    inx
+    lda #OAM_ATTR_PALETTE_4
+    sta oam, x
+
+    ; cursor sprite, byte 4, x pos = 5
+    inx
+    lda #5
+    sta oam, x
+
+    rts
+.endproc
 
 ; The RODATA segment is read-only data in PRG ROM 
 .segment "RODATA"
@@ -211,7 +266,7 @@ palette_data:
 .byte $0F, $00 ,$00, $00 ; background palette 1
 .byte $0F, $00, $00, $00 ; background palette 2
 .byte $0F, $00, $00, $00 ; background palette 3
-.byte $0F, $00, $00, $00 ; sprite palette 0
+.byte $0F, $20, $21, $15 ; sprite palette 0 - black, white, blue, red
 .byte $0F, $00, $00, $00 ; sprite palette 1
 .byte $0F, $00, $00, $00 ; sprite palette 2
 .byte $0F, $00, $00, $00 ; sprite palette 3
