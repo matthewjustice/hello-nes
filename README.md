@@ -1,6 +1,6 @@
 # hello-nes
 
-A simple "Hello World" style program for the Nintendo Entertainment System. It demonstrates initializes the NES, drawing a background, reading from controllers, and drawing / controlling a sprite. 
+A simple "Hello World" style program for the Nintendo Entertainment System. It demonstrates initializing the NES, drawing a background, reading from controllers, and drawing / controlling a sprite. 
 
 NES development is new to me, so I decided to start with a simple Hello World project. I tried to keep it simple and add plenty of comments. I hope others find it useful.
 
