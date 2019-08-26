@@ -19,8 +19,8 @@ For debugging, I like [Mesen](https://www.mesen.ca/). It can import the `hello.n
 On Windows, just run `build.cmd`. The same commands in that file should work on Linux; I didn't just include a shell script. I probably should add a makefile. In any case, a successful build should produce `hello.nes` - run that in the NES emulator / debugger of your choice.
 
 ## Thanks
-I didn't figure this out in a vacuum. These people and resources helped me a bunch.
-- [Nesdev Wiki](http://wiki.nesdev.com) - A great reference
+I didn't figure this out in a vacuum! The following resources helped me a bunch. Thanks to the community of people who made this material available.
+- [Nesdev Wiki](http://wiki.nesdev.com)
 - [Michael Chiaramonte's YouTube video](https://www.youtube.com/watch?v=4UIBOZzz-1I)
 - [This](https://www.masswerk.at/6502/6502_instruction_set.html) and [this](http://www.6502.org/tutorials/6502opcodes.html) 6502 instruction set reference.
 - [Brad Smith's NES-ca65-example](https://github.com/bbbradsmith/NES-ca65-example)
