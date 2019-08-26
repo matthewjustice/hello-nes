@@ -64,6 +64,10 @@ SHIP_ORIENTATION_DOWN  = 2
 SHIP_ORIENTATION_LEFT  = 3
 SHIP_ORIENTATION_RIGHT = 4
 
+; constants for sprite tiles
+TILE_SHIP_UP_DOWN       = 0
+TILE_SHIP_LEFT_RIGHT    = 1
+
 ; The HEADER segment contains the 16-byte iNES signature.
 .segment "HEADER"
 .byte "NES", $1A        ; magic
@@ -278,39 +282,42 @@ check_ship_up:
     cmp #SHIP_ORIENTATION_UP
     bne check_ship_down
     ; Ship is up
-    ldx #0 ; sprite tile 0 is the up/down ship
+    ldx #TILE_SHIP_UP_DOWN
     stx tile_number
     ldx #OAM_ATTR_PALETTE_4
     stx oam_attribs
+    jmp write_oam_data
 
 check_ship_down:
     cmp #SHIP_ORIENTATION_DOWN
     bne check_ship_left
     ; Ship is down
-    ldx #0 ; sprite tile 0 is the up/down ship
+    ldx #TILE_SHIP_UP_DOWN
     stx tile_number
     ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_VERT
     stx oam_attribs
+    jmp write_oam_data
 
 check_ship_left:
     cmp #SHIP_ORIENTATION_LEFT
     bne check_ship_right
     ; Ship is left
-    ldx #1 ; sprite tile 1 is the left/right ship
+    ldx #TILE_SHIP_LEFT_RIGHT
     stx tile_number
     ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_HORIZ
     stx oam_attribs
+    jmp write_oam_data
 
 check_ship_right:
     cmp #SHIP_ORIENTATION_RIGHT
-    bne write_data
+    bne write_oam_data
     ; Ship is right
-    ldx #1 ; sprite tile 1 is the left/right ship
+    ldx #TILE_SHIP_LEFT_RIGHT
     stx tile_number
     ldx #OAM_ATTR_PALETTE_4
     stx oam_attribs
 
-write_data:
+write_oam_data:
     ; ship sprite, byte 0, y pos
     ldx #$00
     lda ship_y
@@ -381,6 +388,9 @@ check_left:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_LEFT
     stx ship_orientation
+    ; if left is pressed, right should not be pressed too
+    ; jump ahead to checking up/down
+    jmp check_up
 
 check_right:
     lda controller1_state
@@ -405,6 +415,9 @@ check_up:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_UP
     stx ship_orientation
+    ; if up is pressed, down should not be pressed too
+    ; jump ahead to checking buttons
+    jmp check_a
 
 check_down:
     lda controller1_state
