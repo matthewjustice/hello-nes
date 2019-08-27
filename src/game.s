@@ -82,70 +82,45 @@ check_a:
 ; This bridges the gap between pure game logic and interacting
 ; with the display (PPU).
 .proc prepare_oam
-    ; define addresses of local variables
-    tile_number   = $00
-    oam_attribs   = $01
-
-    lda ship_orientation
-check_ship_up:
-    cmp #SHIP_ORIENTATION_UP
-    bne check_ship_down
-    ; Ship is up
-    ldx #TILE_SHIP_UP_DOWN
-    stx tile_number
-    ldx #OAM_ATTR_PALETTE_4
-    stx oam_attribs
-    jmp write_oam_data
-
-check_ship_down:
-    cmp #SHIP_ORIENTATION_DOWN
-    bne check_ship_left
-    ; Ship is down
-    ldx #TILE_SHIP_UP_DOWN
-    stx tile_number
-    ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_VERT
-    stx oam_attribs
-    jmp write_oam_data
-
-check_ship_left:
-    cmp #SHIP_ORIENTATION_LEFT
-    bne check_ship_right
-    ; Ship is left
-    ldx #TILE_SHIP_LEFT_RIGHT
-    stx tile_number
-    ldx #OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_HORIZ
-    stx oam_attribs
-    jmp write_oam_data
-
-check_ship_right:
-    cmp #SHIP_ORIENTATION_RIGHT
-    bne write_oam_data
-    ; Ship is right
-    ldx #TILE_SHIP_LEFT_RIGHT
-    stx tile_number
-    ldx #OAM_ATTR_PALETTE_4
-    stx oam_attribs
-
-write_oam_data:
-    ; ship sprite, byte 0, y pos
     ldx #$00
+
+    ; ship sprite, byte 0, y position
     lda ship_y
     sta oam, x
 
     ; ship sprite, byte 1, tile number
     inx
-    lda tile_number
+    ldy ship_orientation
+    lda ship_tile_table, y
     sta oam, x
 
     ; ship sprite, byte 2, attributes
     inx
-    lda oam_attribs
+    lda ship_attrib_table, y
     sta oam, x
 
-    ; ship sprite, byte 4, x pos
+    ; ship sprite, byte 4, x position
     inx
     lda ship_x
     sta oam, x
 
     rts
 .endproc
+
+; The RODATA segment is read-only data in PRG ROM 
+.segment "RODATA"
+
+; Use lookup tables to map between game state 
+; (ship_orientation in particular) and oam
+; data (tile number and attributes)
+ship_tile_table:
+.byte TILE_SHIP_UP_DOWN     ; table[SHIP_ORIENTATION_UP]
+.byte TILE_SHIP_UP_DOWN     ; table[SHIP_ORIENTATION_DOWN]
+.byte TILE_SHIP_LEFT_RIGHT  ; table[SHIP_ORIENTATION_LEFT]
+.byte TILE_SHIP_LEFT_RIGHT  ; table[SHIP_ORIENTATION_RIGHT]
+
+ship_attrib_table:
+.byte OAM_ATTR_PALETTE_4                     ; table[SHIP_ORIENTATION_UP]
+.byte OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_VERT  ; table[SHIP_ORIENTATION_DOWN]
+.byte OAM_ATTR_PALETTE_4|OAM_ATTR_FLIP_HORIZ ; table[SHIP_ORIENTATION_LEFT]
+.byte OAM_ATTR_PALETTE_4                     ; table[SHIP_ORIENTATION_RIGHT]
