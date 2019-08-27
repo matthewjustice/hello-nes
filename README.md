@@ -25,6 +25,7 @@ I didn't figure this out in a vacuum! The following resources helped me a bunch.
 - [This](https://www.masswerk.at/6502/6502_instruction_set.html) and [this](http://www.6502.org/tutorials/6502opcodes.html) 6502 instruction set reference.
 - [Brad Smith's NES-ca65-example](https://github.com/bbbradsmith/NES-ca65-example)
 - [Damian Yerrick's NES project template](https://pineight.com/nes/#template)
+- pubby's feedback on [this nesdev forum post](https://forums.nesdev.com/viewtopic.php?f=10&t=19233)
 
 ## Author
 
