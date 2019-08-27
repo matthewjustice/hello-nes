@@ -99,7 +99,7 @@ check_a:
     lda ship_attrib_table, y
     sta oam, x
 
-    ; ship sprite, byte 4, x position
+    ; ship sprite, byte 3, x position
     inx
     lda ship_x
     sta oam, x
