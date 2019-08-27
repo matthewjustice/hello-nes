@@ -30,9 +30,7 @@ check_left:
     and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0
     beq check_right       ; branch if left isn't pressed
     ; left is pressed, move ship left
-    ldx ship_x
-    dex
-    stx ship_x
+    dec ship_x
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_LEFT
     stx ship_orientation
@@ -45,9 +43,7 @@ check_right:
     and #CONTROLLER_RIGHT   ; if right is pressed, zero flag is 0
     beq check_up            ; branch if right isn't pressed
     ; right is pressed, move ship right
-    ldx ship_x
-    inx
-    stx ship_x
+    inc ship_x
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_RIGHT
     stx ship_orientation
@@ -57,9 +53,7 @@ check_up:
     and #CONTROLLER_UP      ; if up is pressed, zero flag is 0
     beq check_down          ; branch if up isn't pressed
     ; up is pressed, move ship up
-    ldx ship_y
-    dex
-    stx ship_y
+    dec ship_y
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_UP
     stx ship_orientation
@@ -72,9 +66,7 @@ check_down:
     and #CONTROLLER_DOWN    ; if down is pressed, zero flag is 0
     beq check_a             ; branch if down isn't pressed
     ; down is pressed, move ship down
-    ldx ship_y
-    inx
-    stx ship_y
+    inc ship_y
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_DOWN
     stx ship_orientation
