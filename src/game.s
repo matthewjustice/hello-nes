@@ -8,7 +8,7 @@
 .include "constants.inc"
 .import oam
 .importzp ship_x, ship_y, ship_orientation, controller1_state
-.global set_initial_game_state, handle_controller_state, prepare_oam
+.global set_initial_game_state, update_state_from_inputs, prepare_oam
 
 ; set_initial_game_state
 ; Sets the initial game state
@@ -22,9 +22,9 @@
     rts
 .endproc
 
-; handle_controller_state
+; update_state_from_inputs
 ; Check the various controller buttons and set game state
-.proc handle_controller_state
+.proc update_state_from_inputs
 check_left:
     lda controller1_state
     and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0

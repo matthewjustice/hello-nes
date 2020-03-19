@@ -10,14 +10,14 @@
 ; imports from init.s
 .import reset_handler
 ; imports from ppu.s
-.import dma_oam_transfer, turn_on_screen, show_background, load_palette
+.import dma_oam_transfer
 ; imports from controllers.s
-.import read_controllers
+.import get_controller_inputs
 ; imports from game.s
-.import handle_controller_state, prepare_oam
+.import update_state_from_inputs, prepare_oam
 
 ; make available for linked code
-.global main, oam, palette_data, controller1_state, ship_x, ship_y, ship_orientation
+.global game_loop, oam, palette_data, controller1_state, ship_x, ship_y, ship_orientation
 
 ; The HEADER segment contains the 16-byte iNES signature.
 .segment "HEADER"
@@ -67,34 +67,25 @@ oam: .res 256
     rti
 .endproc
 
-; main
-; The main game logic
+; game_loop
+; The game_loop game logic
 ; This code is invoked from reset_handler after it initializes the NES
-.proc main
-    ; We just read PPUSTATUS and should be in VBLANK
-    ; Load the palette
-    jsr load_palette
-
-    ; Show the background
-    jsr show_background
-
-    ; Turn on screen
-    jsr turn_on_screen
+.proc game_loop
 forever:
     ; Read the state of the controllers
-    jsr read_controllers
+    jsr get_controller_inputs
 
     ; Update game state based on controller state
-    jsr handle_controller_state
+    jsr update_state_from_inputs
 
     ; prepare OAM data
     jsr prepare_oam
 
     ; wait on a VBLANK NMI
     lda nmi_count
-main_vblank_wait:
+game_loop_vblank_wait:
     cmp nmi_count
-    beq main_vblank_wait
+    beq game_loop_vblank_wait
 
     ; Copy OAM data to the PPU
     jsr dma_oam_transfer

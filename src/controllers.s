@@ -8,20 +8,20 @@
 
 .include "constants.inc"
 .importzp controller1_state
-.global read_controllers
+.global get_controller_inputs
 
 .segment "CODE"
 
-.proc read_controllers
+.proc get_controller_inputs
     ; Write 1 to $CONTROLLER_1 to retrieve the buttons currently held
     lda #1
     sta CONTROLLER_1
 
-    ; Write 0 to $CONTROLLER_1 to go finish the poll of buttons
+    ; Write 0 to $CONTROLLER_1 to finish the poll of buttons
     lda #0
     sta CONTROLLER_1
 
-    ; Read the polled data button at a time (8 buttons total)
+    ; Read the polled data one button at a time (8 buttons total)
     ; Each button's state comes back one byte at at time
     ldx #8
 controller_read_loop:

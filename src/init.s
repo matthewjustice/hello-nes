@@ -6,7 +6,7 @@
 ;
 
 .include "constants.inc"
-.import oam, main, set_initial_game_state
+.import oam, game_loop, set_initial_game_state, turn_on_screen, show_background, load_palette
 .global reset_handler
 
 .segment "CODE"
@@ -65,6 +65,16 @@ vblank_wait_2:
     bit PPUSTATUS       ; set flag N = bit 7 of PPUSTATUS (1 = in VBLANK)
     bpl vblank_wait_2   ; loop while flag N=0 (while not in VBLANK)
 
-    ; All set up; transfer execution to main 
-    jmp main 
+    ; We just read PPUSTATUS and should be in VBLANK
+    ; Load the palette
+    jsr load_palette
+
+    ; Show the background
+    jsr show_background
+
+    ; Turn on screen
+    jsr turn_on_screen
+
+    ; All set up; transfer execution to game_loop 
+    jmp game_loop 
 .endproc
