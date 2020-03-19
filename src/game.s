@@ -25,29 +25,6 @@
 ; update_state_from_inputs
 ; Check the various controller buttons and set game state
 .proc update_state_from_inputs
-check_left:
-    lda controller1_state
-    and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0
-    beq check_right       ; branch if left isn't pressed
-    ; left is pressed, move ship left
-    dec ship_x
-    ; set ship orientation 
-    ldx #SHIP_ORIENTATION_LEFT
-    stx ship_orientation
-    ; if left is pressed, right should not be pressed too
-    ; jump ahead to checking up/down
-    jmp check_up
-
-check_right:
-    lda controller1_state
-    and #CONTROLLER_RIGHT   ; if right is pressed, zero flag is 0
-    beq check_up            ; branch if right isn't pressed
-    ; right is pressed, move ship right
-    inc ship_x
-    ; set ship orientation 
-    ldx #SHIP_ORIENTATION_RIGHT
-    stx ship_orientation
-
 check_up:
     lda controller1_state
     and #CONTROLLER_UP      ; if up is pressed, zero flag is 0
@@ -58,17 +35,40 @@ check_up:
     ldx #SHIP_ORIENTATION_UP
     stx ship_orientation
     ; if up is pressed, down should not be pressed too
-    ; jump ahead to checking buttons
-    jmp check_a
+    ; jump ahead to checking left/right
+    jmp check_left
 
 check_down:
     lda controller1_state
     and #CONTROLLER_DOWN    ; if down is pressed, zero flag is 0
-    beq check_a             ; branch if down isn't pressed
+    beq check_left          ; branch if down isn't pressed
     ; down is pressed, move ship down
     inc ship_y
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_DOWN
+    stx ship_orientation
+
+check_left:
+    lda controller1_state
+    and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0
+    beq check_right       ; branch if left isn't pressed
+    ; left is pressed, move ship left
+    dec ship_x
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_LEFT
+    stx ship_orientation
+    ; if left is pressed, right should not be pressed too
+    ; jump ahead to checking buttons
+    jmp check_a
+
+check_right:
+    lda controller1_state
+    and #CONTROLLER_RIGHT   ; if right is pressed, zero flag is 0
+    beq check_a             ; branch if right isn't pressed
+    ; right is pressed, move ship right
+    inc ship_x
+    ; set ship orientation 
+    ldx #SHIP_ORIENTATION_RIGHT
     stx ship_orientation
 
 check_a:
