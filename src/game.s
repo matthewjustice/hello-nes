@@ -29,8 +29,12 @@ check_up:
     lda controller1_state
     and #CONTROLLER_UP      ; if up is pressed, zero flag is 0
     beq check_down          ; branch if up isn't pressed
-    ; up is pressed, move ship up
-    dec ship_y
+    ; up is pressed, move ship up if we aren't at the boundary
+    lda ship_y
+    cmp #SHIP_MIN_Y_POSITION ; if ship_y == min and up was pressed, then
+    beq orient_up            ; we are at the boundary, don't move the ship  
+    dec ship_y               ; otherwise, move ship up
+orient_up:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_UP
     stx ship_orientation
@@ -42,8 +46,12 @@ check_down:
     lda controller1_state
     and #CONTROLLER_DOWN    ; if down is pressed, zero flag is 0
     beq check_left          ; branch if down isn't pressed
-    ; down is pressed, move ship down
-    inc ship_y
+    ; down is pressed, move ship down if we aren't at the boundary
+    lda ship_y
+    cmp #SHIP_MAX_Y_POSITION ; if ship_y == max and down was pressed, then
+    beq orient_down          ; we are at the boundary, don't move the ship 
+    inc ship_y               ; otherwise, move ship down       
+orient_down:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_DOWN
     stx ship_orientation
@@ -52,8 +60,12 @@ check_left:
     lda controller1_state
     and #CONTROLLER_LEFT  ; if left is pressed, zero flag is 0
     beq check_right       ; branch if left isn't pressed
-    ; left is pressed, move ship left
-    dec ship_x
+    ; left is pressed, move ship left if we aren't at the boundary
+    lda ship_x
+    cmp #SHIP_MIN_X_POSITION ; if ship_x == min and left was pressed, then
+    beq orient_left          ; we are at the boundary, don't move the ship
+    dec ship_x               ; otherwise, move ship left
+orient_left:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_LEFT
     stx ship_orientation
@@ -65,8 +77,12 @@ check_right:
     lda controller1_state
     and #CONTROLLER_RIGHT   ; if right is pressed, zero flag is 0
     beq check_a             ; branch if right isn't pressed
-    ; right is pressed, move ship right
-    inc ship_x
+    ; right is pressed, move ship right if we aren't at the boundary
+    lda ship_x
+    cmp #SHIP_MAX_X_POSITION ; if ship_x == max and right was pressed, then
+    beq orient_right         ; we are at the boundary, don't move the ship     
+    inc ship_x               ; otherwise, move ship right
+orient_right:
     ; set ship orientation 
     ldx #SHIP_ORIENTATION_RIGHT
     stx ship_orientation
@@ -85,7 +101,11 @@ check_a:
     ldx #$00
 
     ; ship sprite, byte 0, y position
-    lda ship_y
+    ; sprites are displayed one scanline lower than requested
+    ; so decrement the desired position before writing it to oam
+    ldy ship_y
+    dey
+    tya
     sta oam, x
 
     ; ship sprite, byte 1, tile number

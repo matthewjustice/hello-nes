@@ -70,3 +70,13 @@ SHIP_INITIAL_Y          = 140
 ; constants for sprite tiles
 TILE_SHIP_UP_DOWN       = 0
 TILE_SHIP_LEFT_RIGHT    = 1
+
+; constants for sprite positioning
+DISPLAY_WIDTH           = 256
+DISPLAY_HEIGHT          = 240
+SHIP_HEIGHT             = 8
+SHIP_WIDTH              = 8
+SHIP_MIN_X_POSITION     = 0
+SHIP_MIN_Y_POSITION     = 1
+SHIP_MAX_Y_POSITION     = DISPLAY_HEIGHT - SHIP_HEIGHT
+SHIP_MAX_X_POSITION     = DISPLAY_WIDTH  - SHIP_WIDTH
