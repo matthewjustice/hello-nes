@@ -6,7 +6,7 @@
 ;
 
 .include "constants.inc"
-.import oam, game_loop, set_initial_game_state, turn_on_screen, show_background, load_palette
+.import oam, game_loop, set_initial_game_state, turn_on_screen, show_background, load_palette, clear_background_tiles, clear_background_attributes
 .global reset_handler
 
 .segment "CODE"
@@ -68,6 +68,13 @@ vblank_wait_2:
     ; We just read PPUSTATUS and should be in VBLANK
     ; Load the palette
     jsr load_palette
+
+    ; Clear garbage data from the background
+    ldx #NAMETABLE_HIGH_BYTE_UPPER_LEFT
+    lda #0 ; background tile 0
+    jsr clear_background_tiles
+    ldx #ATTRIB_TABLE_HIGH_BYTE_UPPER_LEFT
+    jsr clear_background_attributes
 
     ; Show the background
     jsr show_background

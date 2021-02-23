@@ -8,7 +8,7 @@
 
 .include "constants.inc"
 .import oam, palette_data
-.global dma_oam_transfer, turn_on_screen, show_background, load_palette
+.global dma_oam_transfer, turn_on_screen, show_background, load_palette, clear_background_tiles, clear_background_attributes
 
 .segment "CODE"
 
@@ -79,5 +79,59 @@ show_background_loop:
     sta OAMADDR
     lda #>oam   ; a = high byte of OAM start address ($XX)
     sta OAMDMA  ; Upload 256 bytes from RAM $XX00 to PPU OAM
+    rts
+.endproc
+
+;
+; clear_background_tiles
+; Sets all the background tiles to the same tile value
+; Params:
+;  x            - nametable address high byte (NAMETABLE_HIGH_BYTE_*)
+;  a            - The tile value to set
+.proc clear_background_tiles
+    ; Increment VRAM addresses by 1 (horizontal updates)
+    ldy #PPU_ENABLE_VBLANK|PPU_SPRITE_SIZE_16|PPU_BG_TABLE_AT_0000|PPU_BASE_NAMETABLE_0|PPU_VRAM_INCREMENT_01
+    sty PPUCTRL
+
+    ; Set the nametable address
+    stx PPUADDR
+    ldx #0
+    stx PPUADDR
+
+    ; We need to write 960 tiles, or 240 tiles 4 times.
+    ldy #4                  ; y is the outer loop counter
+outer_write_tiles_loop:
+    ldx #240                ; x is the inner loop counter
+inner_write_tiles_loop:
+    sta PPUDATA
+    dex
+    bne inner_write_tiles_loop
+    dey
+    bne outer_write_tiles_loop
+
+    rts
+.endproc
+
+; clear_background_attributes
+; Set all background attributes for the specified nametable to 0
+; Params:
+;  x            - x - attrib table address high byte (ATTRIB_TABLE_HIGH_BYTE_*)
+.proc clear_background_attributes
+    ; Increment VRAM addresses by 1 (horizontal updates)
+    ldy #PPU_ENABLE_VBLANK|PPU_SPRITE_SIZE_16|PPU_BG_TABLE_AT_0000|PPU_BASE_NAMETABLE_0|PPU_VRAM_INCREMENT_01
+    sty PPUCTRL
+
+    ; x (passed in) is the high byte of the nametable
+    stx PPUADDR
+    ldx #$C0
+    stx PPUADDR
+
+    lda #0  ; attribute value is 0
+    ldy #0  ; y is our counter
+clear_background_attribute_loop:
+    sta PPUDATA
+    iny
+    cpy #ATTRIBUTE_TABLE_SIZE
+    bne clear_background_attribute_loop
     rts
 .endproc
